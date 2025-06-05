@@ -47,8 +47,7 @@ Here is the transcription of a cooking recipe video. Your task:
 - Break down the recipe steps
 - Determine the number of servings if possible
 - Provide one or two tips/tricks if possible
-- Evaluate if the recipe is "healthy" or not (and explain why in one sentence)
-- Provide a quick estimate of macronutrients (carbs, proteins, fats) per serving if possible, otherwise "N/A"
+- Evaluate if the recipe is "healthy" or not: provide both a health indicator (🟢 Green for healthy, 🟡 Yellow for moderate, 🔴 Red for unhealthy) and a brief explanation why
 
 Transcription:
 \"\"\"{transcript}\"\"\"
@@ -85,19 +84,16 @@ Transcription:
                         "items": {"type": "string"}
                     },
                     "servings": {"type": "string"},
-                    "healthiness": {"type": "string"},
-                    "macros": {
+                    "healthiness": {
                         "type": "object",
                         "properties": {
-                            "calories": {"type": "string"},
-                            "proteins": {"type": "string"},
-                            "carbs": {"type": "string"},
-                            "fats": {"type": "string"}
+                            "indicator": {"type": "string"},
+                            "rationale": {"type": "string"}
                         },
-                        "required": ["calories", "proteins", "carbs", "fats"]
+                        "required": ["indicator", "rationale"]
                     }
                 },
-                "required": ["title", "ingredients", "steps", "tips", "servings", "healthiness", "macros"]
+                "required": ["title", "ingredients", "steps", "tips", "servings", "healthiness"]
             }
         }
     }
@@ -137,13 +133,8 @@ def convert_to_markdown(recipe_json):
             markdown += f"- {tip}\n"
         markdown += "\n"
     
-    markdown += "## Nutritional Information\n"
-    markdown += f"**Health Assessment:** {recipe['healthiness']}\n\n"
-    markdown += "**Macros per serving:**\n"
-    markdown += f"- Calories: {recipe['macros']['calories']}\n"
-    markdown += f"- Proteins: {recipe['macros']['proteins']}\n"
-    markdown += f"- Carbs: {recipe['macros']['carbs']}\n"
-    markdown += f"- Fats: {recipe['macros']['fats']}\n"
+    markdown += "## Health Assessment\n"
+    markdown += f"{recipe['healthiness']['indicator']} {recipe['healthiness']['rationale']}\n"
     
     return markdown
 
@@ -153,13 +144,14 @@ def main():
         epilog='''
 Examples:
   uv run %(prog)s "https://youtube.com/watch?v=abc123"
-  uv run %(prog)s "https://youtube.com/watch?v=abc123" --language french
-  uv run %(prog)s "https://youtube.com/watch?v=abc123" --format markdown
-  uv run %(prog)s "https://youtube.com/watch?v=abc123" -l french -f markdown
+  uv run %(prog)s "https://youtube.com/watch?v=abc123" --output my_recipe
+  uv run %(prog)s "https://youtube.com/watch?v=abc123" --language french --format markdown
+  uv run %(prog)s "https://youtube.com/watch?v=abc123" -o italian_pasta -l french -f markdown
         ''',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('url', help='YouTube URL of the cooking video')
+    parser.add_argument('--output', '-o', help='Output file name (without extension, will be added based on format)')
     parser.add_argument('--language', '-l', choices=['english', 'french'], default='english',
                        help='Language for recipe extraction (default: english)')
     parser.add_argument('--format', '-f', choices=['json', 'markdown'], default='json',
@@ -183,16 +175,22 @@ Examples:
     print("Extracting recipe using AI...")
     structured_recipe = extract_recipe_with_gpt(transcript, args.language)
     
+    # Determine output filename
+    if args.output:
+        base_filename = args.output
+    else:
+        base_filename = "structured_recipe"
+    
     # Save output based on format
     if args.format == 'json':
-        filename = "structured_recipe.json"
+        filename = f"{base_filename}.json"
         with open(filename, "w", encoding="utf-8") as f:
             # Parse and reformat JSON to ensure proper formatting
             recipe_dict = json.loads(structured_recipe)
             json.dump(recipe_dict, f, indent=2, ensure_ascii=False)
         print(f"✅ Structured recipe saved as {filename}")
     else:  # markdown
-        filename = "structured_recipe.md"
+        filename = f"{base_filename}.md"
         markdown_content = convert_to_markdown(structured_recipe)
         with open(filename, "w", encoding="utf-8") as f:
             f.write(markdown_content)
