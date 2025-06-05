@@ -42,12 +42,15 @@ def extract_recipe_with_gpt(transcript, language="english"):
     
     # Single English prompt with optional language instruction
     prompt = f"""
-Here is the transcription of a cooking recipe video. Your task:
-- Extract the list of ingredients (with quantities if mentioned)
-- Break down the recipe steps
-- Determine the number of servings if possible
-- Provide one or two tips/tricks if possible
-- Evaluate if the recipe is "healthy" or not: provide both a health indicator (🟢 Green for healthy, 🟡 Yellow for moderate, 🔴 Red for unhealthy) and a brief explanation why
+You are extracting recipe information from a video transcription. Follow these rules STRICTLY:
+
+1. INGREDIENTS: Extract ONLY ingredients explicitly mentioned. Do NOT add common ingredients like salt, pepper, oil, rice, etc. unless specifically mentioned.
+2. STEPS: Include ONLY the cooking steps described in the video.
+3. SERVINGS: Only mention if the speaker states the number of servings.
+4. TIPS: Include ONLY if the speaker gives specific tips in the video. Do NOT add general cooking knowledge.
+5. HEALTH: Evaluate based on the ingredients actually mentioned.
+
+CRITICAL: If you add ANY ingredient, step, or tip not explicitly stated in the transcription, you are making an error. When in doubt, leave it out.
 
 Transcription:
 \"\"\"{transcript}\"\"\"
@@ -59,6 +62,9 @@ Transcription:
             "french": "French"
         }
         prompt += f"\n\nIMPORTANT: Please provide your response in {language_names.get(language, language.title())}."
+        print(f"🌍 Added language instruction for: {language}")
+    else:
+        print("🌍 Using default English language")
     
     system_message = "You are a pedagogical chef and nutritionist."
     
@@ -145,8 +151,9 @@ def main():
 Examples:
   uv run %(prog)s "https://youtube.com/watch?v=abc123"
   uv run %(prog)s "https://youtube.com/watch?v=abc123" --output my_recipe
-  uv run %(prog)s "https://youtube.com/watch?v=abc123" --language french --format markdown
-  uv run %(prog)s "https://youtube.com/watch?v=abc123" -o italian_pasta -l french -f markdown
+  uv run %(prog)s "https://youtube.com/watch?v=abc123" --save-transcript
+  uv run %(prog)s "https://youtube.com/watch?v=abc123" --save-transcript audio_transcript.txt
+  uv run %(prog)s "https://youtube.com/watch?v=abc123" -o pasta -l french -f markdown --save-transcript
         ''',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -156,24 +163,42 @@ Examples:
                        help='Language for recipe extraction (default: english)')
     parser.add_argument('--format', '-f', choices=['json', 'markdown'], default='json',
                        help='Output format (default: json)')
+    parser.add_argument('--save-transcript', nargs='?', const='transcription.txt', metavar='FILE',
+                       help='Save transcription to file (default: transcription.txt if no filename provided)')
     
     args = parser.parse_args()
     
-    print("Downloading audio...")
+    print(f"🎯 Starting recipe extraction from: {args.url}")
+    print(f"🌍 Language: {args.language}")
+    print(f"📄 Format: {args.format}")
+    print(f"💾 Output: {args.output or 'structured_recipe'}")
+    print()
+    
+    print("⬇️  Downloading audio...")
     download_audio_with_ytdlp(args.url)
     
-    print("Transcribing audio...")
+    print("🎙️  Transcribing audio...")
     transcript = transcribe_whisper(AUDIO_FILE)
+    print(f"📏 Transcription length: {len(transcript)} characters")
+    
+    # Save transcription if requested
+    if args.save_transcript:
+        with open(args.save_transcript, "w", encoding="utf-8") as f:
+            f.write(transcript)
+        print(f"📝 Transcription saved to {args.save_transcript} for review")
+    print()
     
     # Clean up audio file after transcription
     try:
         os.remove(AUDIO_FILE)
-        print("Audio file cleaned up.")
+        print("🧹 Audio file cleaned up.")
     except OSError:
-        print("Warning: Could not delete audio file.")
+        print("⚠️  Warning: Could not delete audio file.")
     
-    print("Extracting recipe using AI...")
+    print(f"🤖 Extracting recipe using AI (language: {args.language})...")
     structured_recipe = extract_recipe_with_gpt(transcript, args.language)
+    
+    print("✅ AI extraction completed")
     
     # Determine output filename
     if args.output:
