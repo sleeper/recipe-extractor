@@ -32,7 +32,8 @@ def transcribe_whisper(file_path):
     openai.api_key = OPENAI_API_KEY
     with open(file_path, "rb") as audio_file:
         transcript = openai.audio.transcriptions.create(
-            model="whisper-1",
+            # model="whisper-1",
+            model="gpt-4o-mini-transcribe",
             file=audio_file
         )
     return transcript.text
@@ -56,15 +57,14 @@ Transcription:
 \"\"\"{transcript}\"\"\"
 """
     
-    # Add language instruction if not English
-    if language != "english":
-        language_names = {
-            "french": "French"
-        }
-        prompt += f"\n\nIMPORTANT: Please provide your response in {language_names.get(language, language.title())}."
-        print(f"🌍 Added language instruction for: {language}")
-    else:
-        print("🌍 Using default English language")
+    # Always add explicit language instruction
+    language_names = {
+        "english": "English",
+        "french": "French"
+    }
+    output_language = language_names.get(language, language.title())
+    prompt += f"\n\nIMPORTANT: Regardless of the language used in the transcription, please provide your response (ingredients, steps, tips, etc.) in {output_language}."
+    print(f"🌍 Added explicit language instruction: output in {output_language}")
     
     system_message = "You are a pedagogical chef and nutritionist."
     
@@ -103,9 +103,10 @@ Transcription:
             }
         }
     }
-    
+    print(prompt)
     response = openai.chat.completions.create(
-        model="gpt-4o",
+        # model="gpt-4o",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": system_message},
             {"role": "user", "content": prompt}
