@@ -9,3 +9,8 @@ dependencies = [
     "openai>=1.84.0",
     "yt-dlp>=2025.5.22",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1.1",
+]
