@@ -1,6 +1,7 @@
 import json
 import importlib.util
 from pathlib import Path
+import os
 import sys
 import types
 
@@ -10,6 +11,9 @@ sys.modules.setdefault("openai", types.ModuleType("openai"))
 dotenv_stub = types.ModuleType("dotenv")
 dotenv_stub.load_dotenv = lambda *args, **kwargs: None
 sys.modules.setdefault("dotenv", dotenv_stub)
+
+# Set dummy API key so recipe-extractor doesn't exit on import
+os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 # Dynamically load the convert_to_markdown function from recipe-extractor.py
 spec = importlib.util.spec_from_file_location(
