@@ -198,7 +198,7 @@ uv run recipe-extractor.py "https://youtube.com/watch?v=abc123" \
 1. **Missing OpenAI API Key**
 
    ```
-   Error: OpenAI API key not found
+   Error: OPENAI_API_KEY not set
    ```
 
    Solution: Set up your `.env` file or environment variable

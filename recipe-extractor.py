@@ -7,8 +7,10 @@ import json
 from dotenv import load_dotenv
 load_dotenv()
 
-## TODO: manage the case where the key is not present
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    print("Error: OPENAI_API_KEY not set")
+    sys.exit(1)
 AUDIO_FILE = "audio.mp3"
 
 def download_audio_with_ytdlp(url, out_file=AUDIO_FILE):
