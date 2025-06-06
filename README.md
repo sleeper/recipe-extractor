@@ -227,6 +227,14 @@ uv run recipe-extractor.py "video-url" --save-transcript debug.txt
 
 Then review `debug.txt` to see the raw transcription.
 
+## Running Tests 🧪
+
+After installing the optional development dependencies, run the test suite with:
+
+```bash
+pytest
+```
+
 ## Contributing 🤝
 
 1. Fork the repository
