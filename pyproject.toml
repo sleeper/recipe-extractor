@@ -10,7 +10,7 @@ dependencies = [
     "yt-dlp>=2025.5.22",
 ]
 
-[project.dependency-groups]
+[dependency-groups]
 dev = [
     "pytest>=8.1.1",
 ]
