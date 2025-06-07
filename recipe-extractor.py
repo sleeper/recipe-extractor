@@ -5,6 +5,11 @@ import sys
 import argparse
 import json
 from dotenv import load_dotenv
+
+try:
+    from youtube_transcript_api import YouTubeTranscriptApi
+except Exception:  # pragma: no cover - optional dep may not be installed
+    YouTubeTranscriptApi = None
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -29,6 +34,46 @@ def download_audio_with_ytdlp(url, out_file=AUDIO_FILE):
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
+
+def fetch_video_info(url):
+    """Return video metadata without downloading the file."""
+    with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+        return ydl.extract_info(url, download=False)
+
+def get_youtube_transcript(video_id, languages=("en", "en-US", "en-GB")):
+    """Fetch transcript text from YouTube if available."""
+    if not YouTubeTranscriptApi:
+        print("⚠️  youtube-transcript-api not installed; skipping transcript fetch")
+        return None
+
+    try:
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+    except Exception as e:  # pragma: no cover - network dependent
+        print(f"⚠️  Could not list transcripts: {e}")
+        return None
+
+    for lang in languages:
+        try:
+            t = None
+            try:
+                t = transcript_list.find_manually_created_transcript([lang])
+            except Exception:
+                t = transcript_list.find_generated_transcript([lang])
+            segments = t.fetch() if t else None
+        except Exception:
+            segments = None
+        if segments:
+            return " ".join(seg.get('text', '') for seg in segments)
+
+    return None
+
+def get_post_text(info):
+    """Return video description or caption."""
+    for key in ("description", "caption", "summary"):
+        text = info.get(key)
+        if text:
+            return text
+    return ""
 
 def transcribe_whisper(file_path):
     openai.api_key = OPENAI_API_KEY
@@ -195,12 +240,21 @@ Examples:
     print(f"💾 Output: {args.output or 'structured_recipe'}")
     print()
     
-    print("⬇️  Downloading audio...")
-    download_audio_with_ytdlp(args.url)
-    
-    print("🎙️  Transcribing audio...")
-    transcript = transcribe_whisper(AUDIO_FILE)
-    print(f"📏 Transcription length: {len(transcript)} characters")
+    info = fetch_video_info(args.url)
+    post_text = get_post_text(info)
+
+    transcript = get_youtube_transcript(info.get('id'))
+    if transcript:
+        print("📝 Using existing YouTube transcript")
+    else:
+        print("⬇️  Downloading audio...")
+        download_audio_with_ytdlp(args.url)
+
+        print("🎙️  Transcribing audio...")
+        transcript = transcribe_whisper(AUDIO_FILE)
+        print(f"📏 Transcription length: {len(transcript)} characters")
+
+    combined = (post_text + "\n\n" + transcript).strip()
     
     # Save transcription if requested
     if args.save_transcript:
@@ -217,7 +271,7 @@ Examples:
         print("⚠️  Warning: Could not delete audio file.")
     
     print(f"🤖 Extracting recipe using AI (language: {args.language})...")
-    structured_recipe = extract_recipe_with_gpt(transcript, args.language)
+    structured_recipe = extract_recipe_with_gpt(combined, args.language)
     
     print("✅ AI extraction completed")
     

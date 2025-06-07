@@ -1,11 +1,12 @@
 # Recipe Extractor 🍳
 
-Extract structured recipes from YouTube cooking videos using AI transcription and analysis.
+Extract structured recipes from YouTube or Instagram cooking videos using the post description/caption, available transcripts, and AI audio transcription.
 
 ## Features ✨
 
 - 🎥 Download audio from YouTube/Instagram cooking videos
 - 🎙️ Transcribe audio using OpenAI Whisper
+- 📝 Use video descriptions/captions and existing YouTube transcripts when available (requires `youtube-transcript-api`)
 - 🤖 Extract structured recipe information using GPT
 - 🌍 Multi-language support (English/French output)
 - 📄 Multiple output formats (JSON/Markdown)
@@ -54,7 +55,7 @@ choco install ffmpeg
    cd recipe-extractor
    ```
 
-2. **Install dependencies**
+2. **Install dependencies** (includes optional `youtube-transcript-api` for pulling YouTube captions)
 
    ```bash
    uv sync
