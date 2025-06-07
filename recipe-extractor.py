@@ -45,11 +45,27 @@ def get_youtube_transcript(video_id, languages=("en", "en-US", "en-GB")):
     if not YouTubeTranscriptApi:
         print("⚠️  youtube-transcript-api not installed; skipping transcript fetch")
         return None
+
     try:
-        segments = YouTubeTranscriptApi.get_transcript(video_id, languages=list(languages))
-    except Exception:
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+    except Exception as e:  # pragma: no cover - network dependent
+        print(f"⚠️  Could not list transcripts: {e}")
         return None
-    return " ".join(seg['text'] for seg in segments)
+
+    for lang in languages:
+        try:
+            t = None
+            try:
+                t = transcript_list.find_manually_created_transcript([lang])
+            except Exception:
+                t = transcript_list.find_generated_transcript([lang])
+            segments = t.fetch() if t else None
+        except Exception:
+            segments = None
+        if segments:
+            return " ".join(seg.get('text', '') for seg in segments)
+
+    return None
 
 def get_post_text(info):
     """Return video description or caption."""
