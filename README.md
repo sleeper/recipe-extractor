@@ -1,12 +1,12 @@
 # Recipe Extractor 🍳
 
-Extract structured recipes from YouTube or Instagram cooking videos using the post description/caption, available transcripts, and AI audio transcription.
+Extract structured recipes from YouTube or Instagram cooking videos using the post description/caption, available transcripts in any language, and AI audio transcription.
 
 ## Features ✨
 
 - 🎥 Download audio from YouTube/Instagram cooking videos
 - 🎙️ Transcribe audio using OpenAI Whisper
-- 📝 Use video descriptions/captions and existing YouTube transcripts when available (requires `youtube-transcript-api`)
+- 📝 Use video descriptions/captions and existing YouTube transcripts in their original language when available (requires `youtube-transcript-api`)
 - 🤖 Extract structured recipe information using GPT
 - 🌍 Multi-language support (English/French output)
 - 📄 Multiple output formats (JSON/Markdown)

@@ -40,7 +40,7 @@ def fetch_video_info(url):
     with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
         return ydl.extract_info(url, download=False)
 
-def get_youtube_transcript(video_id, languages=("en", "en-US", "en-GB")):
+def get_youtube_transcript(video_id, languages=None):
     """Fetch transcript text from YouTube if available."""
     if not YouTubeTranscriptApi:
         print("⚠️  youtube-transcript-api not installed; skipping transcript fetch")
@@ -52,18 +52,31 @@ def get_youtube_transcript(video_id, languages=("en", "en-US", "en-GB")):
         print(f"⚠️  Could not list transcripts: {e}")
         return None
 
+    languages = list(languages or [])
+
+    def fetch_text(transcript):
+        try:
+            segments = transcript.fetch()
+        except Exception:
+            return None
+        return " ".join(seg.get("text", "") for seg in segments)
+
+    # First try preferred languages
     for lang in languages:
         try:
-            t = None
-            try:
-                t = transcript_list.find_manually_created_transcript([lang])
-            except Exception:
-                t = transcript_list.find_generated_transcript([lang])
-            segments = t.fetch() if t else None
+            t = transcript_list.find_transcript([lang])
         except Exception:
-            segments = None
-        if segments:
-            return " ".join(seg.get('text', '') for seg in segments)
+            t = None
+        if t:
+            text = fetch_text(t)
+            if text:
+                return text
+
+    # Fall back to the first available transcript
+    for t in transcript_list:
+        text = fetch_text(t)
+        if text:
+            return text
 
     return None
 
@@ -74,6 +87,17 @@ def get_post_text(info):
         if text:
             return text
     return ""
+
+def get_caption_languages(info):
+    """Return list of caption language codes from video metadata."""
+    languages = []
+    for key in ("subtitles", "automatic_captions"):
+        for lang in info.get(key, {}):
+            if lang not in languages:
+                languages.append(lang)
+    if info.get("language") and info["language"] not in languages:
+        languages.append(info["language"])
+    return languages
 
 def transcribe_whisper(file_path):
     openai.api_key = OPENAI_API_KEY
@@ -224,7 +248,8 @@ Examples:
     info = fetch_video_info(args.url)
     post_text = get_post_text(info)
 
-    transcript = get_youtube_transcript(info.get('id'))
+    caption_langs = get_caption_languages(info)
+    transcript = get_youtube_transcript(info.get('id'), caption_langs)
     if transcript:
         print("📝 Using existing YouTube transcript")
     else:
