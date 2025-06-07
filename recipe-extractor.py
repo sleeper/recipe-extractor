@@ -40,12 +40,13 @@ def fetch_video_info(url):
     with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
         return ydl.extract_info(url, download=False)
 
-def get_youtube_transcript(video_id):
+def get_youtube_transcript(video_id, languages=("en", "en-US", "en-GB")):
     """Fetch transcript text from YouTube if available."""
     if not YouTubeTranscriptApi:
+        print("⚠️  youtube-transcript-api not installed; skipping transcript fetch")
         return None
     try:
-        segments = YouTubeTranscriptApi.get_transcript(video_id)
+        segments = YouTubeTranscriptApi.get_transcript(video_id, languages=list(languages))
     except Exception:
         return None
     return " ".join(seg['text'] for seg in segments)
