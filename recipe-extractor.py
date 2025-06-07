@@ -117,33 +117,52 @@ Transcription:
     )
     return response.choices[0].message.content
 
-def convert_to_markdown(recipe_json):
-    """Convert recipe JSON to markdown format"""
+def convert_to_markdown(recipe_json, language="english"):
+    """Convert recipe JSON to markdown format with localized section headings."""
     recipe = json.loads(recipe_json)
-    
+
+    headings = {
+        "english": {
+            "servings": "Servings",
+            "ingredients": "Ingredients",
+            "instructions": "Instructions",
+            "tips": "Tips & Tricks",
+            "health": "Health Assessment",
+        },
+        "french": {
+            "servings": "Portions",
+            "ingredients": "Ingr\u00e9dients",
+            "instructions": "Instructions",
+            "tips": "Astuces",
+            "health": "\u00c9valuation de la sant\u00e9",
+        },
+    }
+
+    labels = headings.get(language.lower(), headings["english"])
+
     markdown = f"# {recipe['title']}\n\n"
-    
-    markdown += f"**Servings:** {recipe['servings']}\n\n"
-    
-    markdown += "## Ingredients\n"
+
+    markdown += f"**{labels['servings']}:** {recipe['servings']}\n\n"
+
+    markdown += f"## {labels['ingredients']}\n"
     for ingredient in recipe['ingredients']:
         markdown += f"- {ingredient}\n"
     markdown += "\n"
-    
-    markdown += "## Instructions\n"
+
+    markdown += f"## {labels['instructions']}\n"
     for i, step in enumerate(recipe['steps'], 1):
         markdown += f"{i}. {step}\n"
     markdown += "\n"
-    
+
     if recipe['tips']:
-        markdown += "## Tips & Tricks\n"
+        markdown += f"## {labels['tips']}\n"
         for tip in recipe['tips']:
             markdown += f"- {tip}\n"
         markdown += "\n"
-    
-    markdown += "## Health Assessment\n"
+
+    markdown += f"## {labels['health']}\n"
     markdown += f"{recipe['healthiness']['indicator']} {recipe['healthiness']['rationale']}\n"
-    
+
     return markdown
 
 def main():
@@ -218,7 +237,7 @@ Examples:
         print(f"✅ Structured recipe saved as {filename}")
     else:  # markdown
         filename = f"{base_filename}.md"
-        markdown_content = convert_to_markdown(structured_recipe)
+        markdown_content = convert_to_markdown(structured_recipe, args.language)
         with open(filename, "w", encoding="utf-8") as f:
             f.write(markdown_content)
         print(f"✅ Structured recipe saved as {filename}")

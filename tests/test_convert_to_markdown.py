@@ -43,3 +43,18 @@ def test_convert_to_markdown_basic():
     assert "## Tips & Tricks" in md
     assert "## Health Assessment" in md
     assert "🟢 Green Very healthy" in md
+
+
+def test_convert_to_markdown_french_headings():
+    sample = {
+        "title": "Recette Exemple",
+        "ingredients": ["1 tasse de farine"],
+        "steps": ["M\u00e9langer"],
+        "tips": [],
+        "servings": "2",
+        "healthiness": {"indicator": "🟢 Green", "rationale": "Tr\u00e8s sain"},
+    }
+    md = convert_to_markdown(json.dumps(sample), language="french")
+
+    assert "**Portions:** 2" in md
+    assert "## Ingr\u00e9dients" in md
