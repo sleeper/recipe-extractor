@@ -59,17 +59,19 @@ def get_youtube_transcript(video_id, languages=None):
             segments = transcript.fetch()
         except Exception:
             return None
-        return " ".join(seg.get("text", "") for seg in segments)
+        return " ".join(seg.text for seg in segments)
 
     # First try preferred languages
     for lang in languages:
         try:
+            print(lang)
             t = transcript_list.find_transcript([lang])
         except Exception:
             t = None
         if t:
             text = fetch_text(t)
             if text:
+                print("-------\n", t)
                 return text
 
     # Fall back to the first available transcript
