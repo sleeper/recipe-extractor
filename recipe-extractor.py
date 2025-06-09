@@ -46,8 +46,9 @@ def get_youtube_transcript(video_id, languages=None):
         print("⚠️  youtube-transcript-api not installed; skipping transcript fetch")
         return None
 
+    ytt_api = YouTubeTranscriptApi()
     try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        transcript_list = ytt_api.list(video_id)
     except Exception as e:  # pragma: no cover - network dependent
         print(f"⚠️  Could not list transcripts: {e}")
         return None
@@ -57,21 +58,20 @@ def get_youtube_transcript(video_id, languages=None):
     def fetch_text(transcript):
         try:
             segments = transcript.fetch()
-        except Exception:
+        except Exception as e:
+            print("⚠️ Issue while getting transcripts: ", e)
             return None
         return " ".join(seg.text for seg in segments)
 
     # First try preferred languages
     for lang in languages:
         try:
-            print(lang)
             t = transcript_list.find_transcript([lang])
         except Exception:
             t = None
         if t:
             text = fetch_text(t)
             if text:
-                print("-------\n", t)
                 return text
 
     # Fall back to the first available transcript
