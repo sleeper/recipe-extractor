@@ -250,27 +250,38 @@ def run_rest_server(host="0.0.0.0", port=8000, *, serve_forever=True):
     return server
 
 
-def run_mcp_server(*, serve_forever: bool = True):
+def run_mcp_server(
+    host: str = "0.0.0.0",
+    port: int = 8000,
+    transport: str = "stdio",
+    *,
+    serve_forever: bool = True,
+):
     """Run an MCP server using the official Python SDK.
 
     Parameters
     ----------
+    host : str
+        Host interface to bind for network transports.
+    port : int
+        Port to listen on for network transports.
+    transport : {'stdio', 'streamable-http'}
+        Transport mechanism to use.
     serve_forever : bool, optional
-        When ``True`` (default) the server runs and blocks on stdio. When
-        ``False`` the :class:`FastMCP` instance is returned for manual control
-        and testing.
+        When ``True`` (default) the server runs and blocks. When ``False`` the
+        :class:`FastMCP` instance is returned for manual control and testing.
     """
 
     from mcp.server.fastmcp import FastMCP
 
-    mcp = FastMCP("Recipe Extractor")
+    mcp = FastMCP("Recipe Extractor", host=host, port=port)
 
     @mcp.tool(name="extract_recipe")
     def extract(url: str, language: str = "english", format: str = "json") -> str:
         return extract_recipe(url, language, format)
 
     if serve_forever:
-        mcp.run()
+        mcp.run(transport)
     return mcp
 
 def main():
@@ -296,14 +307,18 @@ Examples:
                        help='Save transcription to file (default: transcription.txt if no filename provided)')
     parser.add_argument('--server', '-s', action='store_true', help='Run REST API server')
     parser.add_argument('--mcp', '-m', action='store_true', help='Run MCP server')
+    parser.add_argument('--host', default='0.0.0.0', help='Server host (default: 0.0.0.0)')
+    parser.add_argument('--port', type=int, default=8000, help='Server port (default: 8000)')
+    parser.add_argument('--mcp-transport', choices=['stdio', 'streamable-http'], default='stdio',
+                        help='Transport for MCP server (default: stdio)')
     
     args = parser.parse_args()
 
     if args.server:
-        run_rest_server()
+        run_rest_server(args.host, args.port)
         return
     if args.mcp:
-        run_mcp_server()
+        run_mcp_server(args.host, args.port, args.mcp_transport)
         return
 
     if not args.url:

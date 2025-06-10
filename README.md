@@ -94,21 +94,21 @@ uv run recipe-extractor.py "https://youtube.com/watch?v=abc123" --format markdow
 
 ### Server Mode
 
-Run the tool as a small REST API server:
+Run the tool as a small REST API server. You can specify the host and port:
 
 ```bash
-uv run recipe-extractor.py --server
+uv run recipe-extractor.py --server --host 127.0.0.1 --port 8080
 ```
 
 The server exposes `/extract` with `url`, `language`, and `format` query parameters.
 
 ### MCP Mode
 
-Start an MCP server using the official Python SDK. It communicates over stdio
-using the MCP handshake:
+Start an MCP server using the official Python SDK. Choose the transport
+(``stdio`` or ``streamable-http``) and listening address:
 
 ```bash
-uv run recipe-extractor.py --mcp
+uv run recipe-extractor.py --mcp --mcp-transport stdio --host 127.0.0.1 --port 9000
 ```
 
 Use an MCP-compatible client to invoke the `extract_recipe` tool.
@@ -143,6 +143,9 @@ uv run recipe-extractor.py "https://youtube.com/watch?v=abc123" \
 | `--save-transcript` |       | Save transcription to file           | Not saved           |
 | `--server`          | `-s`  | Run REST API server                  | off                 |
 | `--mcp`             | `-m`  | Run MCP server                       | off                 |
+| `--host`            |       | Server host                          | `0.0.0.0`           |
+| `--port`            |       | Server port                          | `8000`              |
+| `--mcp-transport`   |       | MCP transport (`stdio`/`streamable-http`) | `stdio`         |
 | `--help`            | `-h`  | Show help message                    |                     |
 
 ## Output Format 📋

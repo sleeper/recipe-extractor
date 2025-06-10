@@ -58,7 +58,12 @@ def test_mcp_server_basic():
 
     recipe_extractor.extract_recipe = fake_extract
 
-    mcp = recipe_extractor.run_mcp_server(serve_forever=False)
+    mcp = recipe_extractor.run_mcp_server(
+        "127.0.0.1",
+        0,
+        "stdio",
+        serve_forever=False,
+    )
 
     async def run():
         from mcp.shared.memory import (
