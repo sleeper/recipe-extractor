@@ -8,6 +8,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "openai>=1.84.0",
     "yt-dlp>=2025.5.22",
+    "mcp>=1.9",
     "youtube-transcript-api>=0.6.2",
 ]
 

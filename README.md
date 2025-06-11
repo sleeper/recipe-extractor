@@ -13,6 +13,7 @@ Extract structured recipes from YouTube or Instagram cooking videos using the po
 - 🟢 Health assessment with visual indicators
 - 🛡️ Anti-hallucination guardrails to prevent false ingredients
 - 📝 Optional transcription saving for debugging
+- 🌐 Can run as a REST API server or MCP server using the official SDK
 
 ## Prerequisites 📋
 
@@ -92,6 +93,27 @@ uv run recipe-extractor.py "https://youtube.com/watch?v=abc123" --language frenc
 uv run recipe-extractor.py "https://youtube.com/watch?v=abc123" --format markdown
 ```
 
+### Server Mode
+
+Run the tool as a small REST API server. You can specify the host and port:
+
+```bash
+uv run recipe-extractor.py --server --host 127.0.0.1 --port 8080
+```
+
+The server exposes `/extract` with `url`, `language`, and `format` query parameters.
+
+### MCP Mode
+
+Start an MCP server using the official Python SDK. Choose the transport
+(``stdio`` or ``streamable-http``) and listening address:
+
+```bash
+uv run recipe-extractor.py --mcp --mcp-transport stdio --host 127.0.0.1 --port 9000
+```
+
+Use an MCP-compatible client to invoke the `extract_recipe` tool.
+
 ### Advanced Usage
 
 ```bash
@@ -120,6 +142,11 @@ uv run recipe-extractor.py "https://youtube.com/watch?v=abc123" \
 | `--language`        | `-l`  | Output language (`english`/`french`) | `english`           |
 | `--format`          | `-f`  | Output format (`json`/`markdown`)    | `json`              |
 | `--save-transcript` |       | Save transcription to file           | Not saved           |
+| `--server`          | `-s`  | Run REST API server                  | off                 |
+| `--mcp`             | `-m`  | Run MCP server                       | off                 |
+| `--host`            |       | Server host                          | `0.0.0.0`           |
+| `--port`            |       | Server port                          | `8000`              |
+| `--mcp-transport`   |       | MCP transport (`stdio`/`streamable-http`) | `stdio`         |
 | `--help`            | `-h`  | Show help message                    |                     |
 
 ## Output Format 📋

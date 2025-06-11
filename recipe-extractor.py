@@ -4,6 +4,8 @@ import os
 import sys
 import argparse
 import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse, parse_qs
 from dotenv import load_dotenv
 
 try:
@@ -236,6 +238,123 @@ def convert_to_markdown(recipe_json, language="english"):
 
     return markdown
 
+
+def extract_recipe(url, language="english", output_format="json", save_transcript=None):
+    """High-level helper to extract a recipe from a URL and return it as a string."""
+    print(f"🎯 Extracting from URL: {url}")
+
+    print("⬇️  Downloading audio...")
+    download_audio_with_ytdlp(url)
+
+    print("🎙️  Transcribing audio...")
+    transcript = transcribe_whisper(AUDIO_FILE)
+
+    if save_transcript:
+        with open(save_transcript, "w", encoding="utf-8") as f:
+            f.write(transcript)
+
+    try:
+        os.remove(AUDIO_FILE)
+    except OSError:
+        pass
+
+    print(f"🤖 Extracting recipe using AI (language: {language})...")
+    structured_recipe = extract_recipe_with_gpt(transcript, language)
+
+    if output_format == "markdown":
+        return convert_to_markdown(structured_recipe, language)
+    else:
+        # ensure valid JSON formatting
+        return json.dumps(json.loads(structured_recipe), ensure_ascii=False)
+
+
+def run_rest_server(host="0.0.0.0", port=8000, *, serve_forever=True):
+    """Run a very small REST API server.
+
+    Parameters
+    ----------
+    host : str
+        Host interface to bind.
+    port : int
+        Port to listen on.
+    serve_forever : bool, optional
+        If ``True`` (default) block and serve forever. When ``False`` the
+        configured ``HTTPServer`` instance is returned without entering the
+        serving loop. This is useful for unit tests.
+    """
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            parsed = urlparse(self.path)
+            if parsed.path != "/extract":
+                self.send_error(404, "Not Found")
+                return
+
+            qs = parse_qs(parsed.query)
+            url = qs.get("url", [None])[0]
+            if not url:
+                self.send_error(400, "Missing url parameter")
+                return
+
+            language = qs.get("language", ["english"])[0]
+            fmt = qs.get("format", ["json"])[0]
+
+            try:
+                result = extract_recipe(url, language, fmt)
+            except Exception as e:
+                self.send_error(500, str(e))
+                return
+
+            if fmt == "markdown":
+                self.send_response(200)
+                self.send_header("Content-Type", "text/markdown; charset=utf-8")
+            else:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(result.encode("utf-8"))
+
+    server = HTTPServer((host, port), Handler)
+    print(f"🚀 REST API running on http://{host}:{port}")
+    if serve_forever:
+        server.serve_forever()
+    return server
+
+
+def run_mcp_server(
+    host: str = "0.0.0.0",
+    port: int = 8000,
+    transport: str = "stdio",
+    *,
+    serve_forever: bool = True,
+):
+    """Run an MCP server using the official Python SDK.
+
+    Parameters
+    ----------
+    host : str
+        Host interface to bind for network transports.
+    port : int
+        Port to listen on for network transports.
+    transport : {'stdio', 'streamable-http'}
+        Transport mechanism to use.
+    serve_forever : bool, optional
+        When ``True`` (default) the server runs and blocks. When ``False`` the
+        :class:`FastMCP` instance is returned for manual control and testing.
+    """
+
+    from mcp.server.fastmcp import FastMCP
+
+    mcp = FastMCP("Recipe Extractor", host=host, port=port)
+
+    @mcp.tool(name="extract_recipe")
+    def extract(url: str, language: str = "english", format: str = "json") -> str:
+        return extract_recipe(url, language, format)
+
+    if serve_forever:
+        mcp.run(transport)
+    return mcp
+
 def main():
     parser = argparse.ArgumentParser(
         description='Extract recipes from YouTube cooking videos',
@@ -249,7 +368,7 @@ Examples:
         ''',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument('url', help='YouTube URL of the cooking video')
+    parser.add_argument('url', nargs='?', help='YouTube URL of the cooking video')
     parser.add_argument('--output', '-o', help='Output file name (without extension, will be added based on format)')
     parser.add_argument('--language', '-l', choices=['english', 'french'], default='english',
                        help='Language for recipe extraction (default: english)')
@@ -257,9 +376,25 @@ Examples:
                        help='Output format (default: json)')
     parser.add_argument('--save-transcript', nargs='?', const='transcription.txt', metavar='FILE',
                        help='Save transcription to file (default: transcription.txt if no filename provided)')
+    parser.add_argument('--server', '-s', action='store_true', help='Run REST API server')
+    parser.add_argument('--mcp', '-m', action='store_true', help='Run MCP server')
+    parser.add_argument('--host', default='0.0.0.0', help='Server host (default: 0.0.0.0)')
+    parser.add_argument('--port', type=int, default=8000, help='Server port (default: 8000)')
+    parser.add_argument('--mcp-transport', choices=['stdio', 'streamable-http'], default='stdio',
+                        help='Transport for MCP server (default: stdio)')
     
     args = parser.parse_args()
-    
+
+    if args.server:
+        run_rest_server(args.host, args.port)
+        return
+    if args.mcp:
+        run_mcp_server(args.host, args.port, args.mcp_transport)
+        return
+
+    if not args.url:
+        parser.error("the following arguments are required: url")
+
     print(f"🎯 Starting recipe extraction from: {args.url}")
     print(f"🌍 Language: {args.language}")
     print(f"📄 Format: {args.format}")
