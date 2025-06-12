@@ -13,6 +13,59 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "python-sdk" / "src
 # Stubs for optional deps so recipe-extractor can be imported
 sys.modules.setdefault("yt_dlp", types.ModuleType("yt_dlp"))
 sys.modules.setdefault("openai", types.ModuleType("openai"))
+sys.modules.setdefault("dotenv", types.SimpleNamespace(load_dotenv=lambda: None))
+
+# Minimal stub for the mcp package used in run_mcp_server
+if "mcp" not in sys.modules:
+    mcp_stub = types.ModuleType("mcp")
+    server_mod = types.ModuleType("server")
+    shared_mod = types.ModuleType("shared")
+
+    class FastMCP:
+        def __init__(self, name, host=None, port=None):
+            self.name = name
+            self.host = host
+            self.port = port
+            self.tools = {}
+            self._mcp_server = self
+
+        def tool(self, name):
+            def decorator(fn):
+                self.tools[name] = fn
+                return fn
+            return decorator
+
+        def run(self, transport):
+            self.transport = transport
+
+    server_mod.fastmcp = types.ModuleType("fastmcp")
+    server_mod.fastmcp.FastMCP = FastMCP
+
+    def create_connected_server_and_client_session(server):
+        class Client:
+            async def call_tool(self, tool_name, data):
+                result_text = server.tools[tool_name](**data)
+                return types.SimpleNamespace(content=[types.SimpleNamespace(text=result_text)])
+
+        class Session:
+            async def __aenter__(self):
+                return Client()
+
+            async def __aexit__(self, exc_type, exc, tb):
+                pass
+
+        return Session()
+
+    shared_mod.memory = types.ModuleType("memory")
+    shared_mod.memory.create_connected_server_and_client_session = create_connected_server_and_client_session
+
+    mcp_stub.server = server_mod
+    mcp_stub.shared = shared_mod
+    sys.modules["mcp"] = mcp_stub
+    sys.modules["mcp.server"] = server_mod
+    sys.modules["mcp.server.fastmcp"] = server_mod.fastmcp
+    sys.modules["mcp.shared"] = shared_mod
+    sys.modules["mcp.shared.memory"] = shared_mod.memory
 
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
