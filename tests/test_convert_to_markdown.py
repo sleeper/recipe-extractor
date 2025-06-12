@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "python-sdk" / "src
 # Provide stub modules so the script can be imported without optional deps
 sys.modules.setdefault("yt_dlp", types.ModuleType("yt_dlp"))
 sys.modules.setdefault("openai", types.ModuleType("openai"))
+sys.modules.setdefault("dotenv", types.SimpleNamespace(load_dotenv=lambda: None))
 
 # Set dummy API key so recipe-extractor doesn't exit on import
 os.environ.setdefault("OPENAI_API_KEY", "test-key")

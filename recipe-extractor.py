@@ -168,7 +168,10 @@ Transcription:
                     "healthiness": {
                         "type": "object",
                         "properties": {
-                            "indicator": {"type": "string"},
+                            "indicator": {
+                                "type": "string",
+                                "enum": ["healthy", "neutral", "unhealthy"]
+                            },
                             "rationale": {"type": "string"}
                         },
                         "required": ["indicator", "rationale"]
