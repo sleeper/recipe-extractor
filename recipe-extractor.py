@@ -20,6 +20,12 @@ if not OPENAI_API_KEY:
     sys.exit(1)
 AUDIO_FILE = "audio.mp3"
 
+
+def is_youtube_url(url: str) -> bool:
+    """Return True if the URL points to YouTube."""
+    host = urlparse(url).netloc.lower()
+    return "youtube.com" in host or "youtu.be" in host
+
 def download_audio_with_ytdlp(url, out_file=AUDIO_FILE):
     # Remove extension from out_file since FFmpegExtractAudio will add it
     base_name = out_file.rsplit('.', 1)[0] if '.' in out_file else out_file
@@ -407,11 +413,14 @@ Examples:
     info = fetch_video_info(args.url)
     post_text = get_post_text(info)
 
-    caption_langs = get_caption_languages(info)
-    transcript = get_youtube_transcript(info.get('id'), caption_langs)
-    if transcript:
-        print("📝 Using existing YouTube transcript")
-    else:
+    transcript = None
+    if is_youtube_url(args.url):
+        caption_langs = get_caption_languages(info)
+        transcript = get_youtube_transcript(info.get('id'), caption_langs)
+        if transcript:
+            print("📝 Using existing YouTube transcript")
+
+    if not transcript:
         print("⬇️  Downloading audio...")
         download_audio_with_ytdlp(args.url)
 
