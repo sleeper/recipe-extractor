@@ -16,6 +16,7 @@ spec = importlib.util.spec_from_file_location(
 )
 recipe_extractor = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(recipe_extractor)
+video_transcripts = sys.modules["video_transcripts"]
 
 def test_is_youtube_url_detection():
     assert recipe_extractor.is_youtube_url("https://www.youtube.com/watch?v=abc")
@@ -28,19 +29,18 @@ def test_main_only_uses_youtube_transcripts(tmp_path, monkeypatch):
     def fake_fetch_info(url):
         return {"id": "abc"}
 
-    monkeypatch.setattr(recipe_extractor, "fetch_video_info", fake_fetch_info)
-    monkeypatch.setattr(recipe_extractor, "get_post_text", lambda info: "")
-    monkeypatch.setattr(recipe_extractor, "get_caption_languages", lambda info: [])
+    monkeypatch.setattr(video_transcripts, "fetch_video_info", fake_fetch_info)
+    monkeypatch.setattr(video_transcripts, "get_post_text", lambda info: "")
+    monkeypatch.setattr(video_transcripts, "get_caption_languages", lambda info: [])
 
     def fake_get_transcript(video_id, langs=None):
         calls["yt"] += 1
         return "transcript"
 
-    monkeypatch.setattr(recipe_extractor, "get_youtube_transcript", fake_get_transcript)
-    monkeypatch.setattr(recipe_extractor, "download_audio_with_ytdlp", lambda url: None)
-    monkeypatch.setattr(recipe_extractor, "transcribe_whisper", lambda path: "audio")
+    monkeypatch.setattr(video_transcripts, "get_youtube_transcript", fake_get_transcript)
+    monkeypatch.setattr(video_transcripts, "download_audio_with_ytdlp", lambda url: None)
+    monkeypatch.setattr(video_transcripts, "transcribe_whisper", lambda path: "audio")
     monkeypatch.setattr(recipe_extractor, "extract_recipe_with_gpt", lambda t, l: "{}")
-    monkeypatch.setattr(recipe_extractor.os, "remove", lambda path: None)
 
     # YouTube URL should trigger transcript fetch
     monkeypatch.setattr(sys, "argv", [
